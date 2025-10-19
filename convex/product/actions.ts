@@ -5,19 +5,10 @@ import { api } from "../_generated/api";
 import { v, ConvexError } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import { generateTextEmbedding, generateImageDescription } from "../lib/openai";
+import { ProductSearchResult } from "../../types";
 
 type EmbeddingId = Id<"productEmbeddings">;
 type VectorSearchResult = { _id: EmbeddingId; _score: number };
-interface ProductSearchResult {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  category: string;
-  description: string;
-  imageUrl: string;
-  score: number;
-}
 
 // Constants
 const RESULT_LIMIT = 10;
@@ -122,11 +113,11 @@ async function fetchAndFormatProducts(
       const product = productMap.get(result._id);
       if (!product) return null;
       return {
-        id: product._id,
+        _id: product._id,
         name: product.name,
         brand: product.brand,
         price: product.price,
-        category: product.category,
+        category: product.categoryName,
         description: product.description,
         imageUrl: product.imageUrl,
         score: result._score,

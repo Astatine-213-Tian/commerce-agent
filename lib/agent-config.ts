@@ -1,20 +1,7 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 import type { Id } from "@/convex/_generated/dataModel";
-
-/**
- * Product search result type
- */
-export interface ProductSearchResult {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  category: string;
-  description: string;
-  imageUrl: string;
-  score: number;
-}
+import { ProductSearchResult, Category } from "@/types";
 
 /**
  * Configuration for the commerce voice agent
@@ -37,6 +24,7 @@ export const AGENT_CONFIG = {
 
 Key behaviors:
 - Be friendly, helpful, and concise
+- Use the listCategories tool to show available product categories when users want to browse
 - Use the searchProductsByText tool when users describe what they're looking for
 - Use the searchProductsByImage tool when users upload images to find similar products
 - Present product recommendations clearly with name, brand, price, and brief description
@@ -54,10 +42,11 @@ Always respond with the search results after executing a tool so users know what
 } as const;
 
 /**
- * Create tools that execute Convex actions.
+ * Create tools that execute Convex actions and queries.
  *
  * @param searchByText - Convex action for text search
  * @param searchByImage - Convex action for image search
+ * @param listCategories - Convex query to list all categories
  */
 export function createAgentTools(
   searchByText: (args: {
@@ -69,7 +58,8 @@ export function createAgentTools(
     imageId: Id<"_storage">;
     minPrice?: number;
     maxPrice?: number;
-  }) => Promise<ProductSearchResult[]>
+  }) => Promise<ProductSearchResult[]>,
+  listCategories: () => Promise<Category[]>
 ) {
   const searchProductsByTextTool = tool({
     name: "searchProductsByText",
@@ -139,5 +129,21 @@ export function createAgentTools(
     },
   });
 
-  return [searchProductsByTextTool, searchProductsByImageTool];
+  const listCategoriesTool = tool({
+    name: "listCategories",
+    description:
+      "List all available product categories. Use this to help users browse by category or understand what types of products are available.",
+    parameters: z.object({}),
+    execute: async () => {
+      try {
+        const categories = await listCategories();
+        return categories;
+      } catch (error) {
+        console.error("Error in listCategories:", error);
+        return { error: String(error) };
+      }
+    },
+  });
+
+  return [searchProductsByTextTool, searchProductsByImageTool, listCategoriesTool];
 }

@@ -8,11 +8,13 @@
  * @module
  */
 
+import type * as category_mutations from "../category/mutations.js";
+import type * as category_queries from "../category/queries.js";
 import type * as lib_openai from "../lib/openai.js";
 import type * as product_actions from "../product/actions.js";
 import type * as product_mutations from "../product/mutations.js";
 import type * as product_queries from "../product/queries.js";
-import type * as seed_products from "../seed/products.js";
+import type * as seed_mockdata from "../seed/mockdata.js";
 import type * as seed_seed from "../seed/seed.js";
 import type * as storage_mutations from "../storage/mutations.js";
 
@@ -31,11 +33,13 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "category/mutations": typeof category_mutations;
+  "category/queries": typeof category_queries;
   "lib/openai": typeof lib_openai;
   "product/actions": typeof product_actions;
   "product/mutations": typeof product_mutations;
   "product/queries": typeof product_queries;
-  "seed/products": typeof seed_products;
+  "seed/mockdata": typeof seed_mockdata;
   "seed/seed": typeof seed_seed;
   "storage/mutations": typeof storage_mutations;
 }>;

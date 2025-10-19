@@ -4,7 +4,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { ConvexError } from "convex/values";
 import OpenAI from "openai";
-import { mockProducts } from "./products";
+import { mockProducts, mockCategories } from "./mockdata";
 import {
   generateTextEmbedding,
   generateImageDescription,
@@ -15,21 +15,69 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Seed categories
+export const seedCategories = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    console.log(`Starting to seed ${mockCategories.length} categories...`);
+
+    for (const category of mockCategories) {
+      // Check if category already exists by slug
+      const existing = await ctx.runQuery(
+        internal.category.queries.getCategoryBySlug,
+        { slug: category.slug }
+      );
+
+      if (existing) {
+        console.log(`  ⏭️  Category "${category.name}" already exists, skipping...`);
+        continue;
+      }
+
+      // Insert new category
+      await ctx.runMutation(internal.category.mutations.insertCategory, {
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+      });
+
+      console.log(`  ✓ Created category: ${category.name}`);
+    }
+
+    console.log(`\n✓ Successfully seeded categories!`);
+    return { success: true, count: mockCategories.length };
+  },
+});
+
 // Main seeding action
 export const seedAllProducts = internalAction({
   args: {},
   handler: async (ctx) => {
-    console.log(`Starting to seed ${mockProducts.length} products...`);
+    // Seed categories first
+    console.log("Seeding categories...");
+    await ctx.runAction(internal.seed.seed.seedCategories);
+
+    console.log(`\nStarting to seed ${mockProducts.length} products...`);
 
     for (let i = 0; i < mockProducts.length; i++) {
       const product = mockProducts[i];
       console.log(`\n[${i + 1}/${mockProducts.length}] Processing: ${product.name}`);
 
       try {
+        // Step 1: Look up category ID
+        console.log("  - Looking up category...");
+        const category = await ctx.runQuery(
+          internal.category.queries.getCategoryByName,
+          { name: product.category }
+        );
+
+        if (!category) {
+          throw new ConvexError(`Category "${product.category}" not found`);
+        }
+
         // Check if product already exists
         const existingProduct = await ctx.runQuery(
           internal.product.queries.getProductByName,
-          { category: product.category, name: product.name }
+          { categoryId: category._id, name: product.name }
         );
 
         if (existingProduct) {
@@ -37,7 +85,7 @@ export const seedAllProducts = internalAction({
           continue;
         }
 
-        // Step 1: Generate product image with gpt-image-1-mini
+        // Step 2: Generate product image with gpt-image-1-mini
         console.log("  - Generating image with gpt-image-1-mini...");
         const imagePrompt = generateImagePrompt(product.name, product.category);
         const imageResponse = await openai.images.generate({
@@ -58,7 +106,7 @@ export const seedAllProducts = internalAction({
           throw new ConvexError("No base64 image data returned from gpt-image-1-mini");
         }
 
-        // Step 2: Convert base64 to blob and store in Convex storage
+        // Step 3: Convert base64 to blob and store in Convex storage
         console.log("  - Storing image in Convex storage...");
         const imageBuffer = Buffer.from(b64Image, "base64");
         const imageBlob = new Blob([imageBuffer], { type: "image/png" });
@@ -69,29 +117,29 @@ export const seedAllProducts = internalAction({
           throw new ConvexError("Failed to get URL for stored image");
         }
 
-        // Step 3: Generate image description using Vision API
+        // Step 4: Generate image description using Vision API
         // For Vision API, we need to convert base64 to data URL
         console.log("  - Generating image description with Vision API...");
         const dataUrl = `data:image/png;base64,${b64Image}`;
         const imageDescription = await generateImageDescription(dataUrl);
 
-        // Step 4: Generate image embedding from description
+        // Step 5: Generate image embedding from description
         console.log("  - Creating image embedding...");
         const imageEmbedding = await generateTextEmbedding(imageDescription);
 
-        // Step 5: Generate text embedding from name + description
+        // Step 6: Generate text embedding from name + description
         console.log("  - Creating text embedding...");
         const textContent = `${product.name}. ${product.description}`;
         const textEmbedding = await generateTextEmbedding(textContent);
 
-        // Step 6: Insert product into database
+        // Step 7: Insert product into database
         console.log("  - Inserting into database...");
         await ctx.runMutation(internal.product.mutations.insertProduct, {
           name: product.name,
           brand: product.brand,
           description: product.description,
           price: product.price,
-          category: product.category,
+          categoryId: category._id,
           imageUrl,
           textEmbedding,
           imageEmbedding,

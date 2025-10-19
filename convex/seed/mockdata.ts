@@ -1,3 +1,46 @@
+export const mockCategories = [
+  {
+    name: "Electronics",
+    slug: "electronics",
+    description: "Phones, laptops, tablets, headphones, and electronic accessories",
+  },
+  {
+    name: "Clothing",
+    slug: "clothing",
+    description: "T-shirts, jackets, jeans, dresses, and apparel",
+  },
+  {
+    name: "Shoes",
+    slug: "shoes",
+    description: "Sneakers, boots, sandals, formal shoes, and footwear",
+  },
+  {
+    name: "Home & Kitchen",
+    slug: "home-kitchen",
+    description: "Cookware, bedding, furniture, and home decor",
+  },
+  {
+    name: "Sports & Outdoors",
+    slug: "sports-outdoors",
+    description: "Fitness equipment, camping gear, and activewear",
+  },
+  {
+    name: "Beauty & Personal Care",
+    slug: "beauty-personal-care",
+    description: "Skincare, makeup, grooming tools, and personal care products",
+  },
+  {
+    name: "Books",
+    slug: "books",
+    description: "Fiction, non-fiction, textbooks, and comics",
+  },
+  {
+    name: "Toys & Games",
+    slug: "toys-games",
+    description: "Board games, video games, educational toys, and gaming consoles",
+  },
+];
+
 export const mockProducts = [
   // Electronics - Phones, laptops, headphones, tablets
   {
@@ -454,10 +497,10 @@ export const mockProducts = [
     category: "Books",
   },
   {
-    name: "Batman: The Killing Joke by Alan Moore and Brian Bolland, Deluxe Edition Hardcover Graphic Novel, 64 Pages",
-    brand: "DC Comics",
-    description: "Definitive Joker origin story that changed comics. Written by Alan Moore with art by Brian Bolland. Explores the thin line between sanity and madness. Deluxe edition with recolored artwork by Bolland. 64 pages of psychological thriller. Includes afterword by Bolland and original colors section. Mature themes for adult readers. Influential work cited by filmmakers and writers. Hardcover collector's edition available.",
-    price: 14.99,
+    name: "Calvin and Hobbes: Complete Collection by Bill Watterson, 3-Volume Hardcover Box Set, Full Color Comic Strips",
+    brand: "Andrews McMeel",
+    description: "Complete collection of beloved comic strip. All Calvin and Hobbes strips in chronological order. Three hardcover volumes in protective slipcase. Full-color restoration of original artwork. Over 1400 pages total of timeless humor. Features imaginative six-year-old Calvin and tiger Hobbes. Explores childhood, philosophy, and adventure. Winner of multiple awards including Reuben Award. Perfect for fans of all ages. Considered one of greatest comic strips ever.",
+    price: 89.99,
     category: "Books",
   },
   {
@@ -482,9 +525,9 @@ export const mockProducts = [
     category: "Books",
   },
   {
-    name: "Spider-Man Complete Collection Volume 1, Amazing Fantasy #15 and Amazing Spider-Man #1-20, Hardcover 480 Pages",
-    brand: "Marvel",
-    description: "Collects Amazing Fantasy #15 and Amazing Spider-Man #1-20. Stan Lee and Steve Ditko's legendary run. Introduction of Peter Parker, Uncle Ben, Aunt May. First appearances of classic villains. Restored and recolored from original art. 480 pages in hardcover format. Behind-the-scenes bonus material included. Essential reading for Marvel fans. Chronicles early days of wall-crawler. Collector's item with dust jacket.",
+    name: "Bone: The Complete Cartoon Epic by Jeff Smith, One-Volume Color Edition, 1300+ Pages, Award-Winning Fantasy Comic",
+    brand: "Scholastic",
+    description: "Complete Bone saga in single volume. Jeff Smith's award-winning fantasy adventure. Three Bone cousins lost in mysterious valley. Epic quest filled with humor and heart. Full-color edition with 1300+ pages. Winner of 10 Eisner Awards and multiple Harvey Awards. Suitable for readers of all ages. Features dragons, rat creatures, and mysterious forces. New York Times bestseller. Considered one of greatest graphic novels ever made.",
     price: 39.99,
     category: "Books",
   },

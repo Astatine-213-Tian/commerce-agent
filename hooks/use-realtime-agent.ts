@@ -8,7 +8,7 @@ import {
   RealtimeMessageItem,
   OpenAIRealtimeWebRTC,
 } from "@openai/agents/realtime";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { createAgentTools, AGENT_CONFIG } from "@/lib/agent-config";
 
@@ -50,11 +50,12 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
   // Convex action hooks
   const searchByText = useAction(api.product.actions.searchProductsByText);
   const searchByImage = useAction(api.product.actions.searchProductsByImage);
+  const listCategories = useQuery(api.category.queries.listCategories);
 
   // Memoize tools to avoid recreating on every render
   const tools = useMemo(
-    () => createAgentTools(searchByText, searchByImage),
-    [searchByText, searchByImage]
+    () => createAgentTools(searchByText, searchByImage, () => Promise.resolve(listCategories || [])),
+    [searchByText, searchByImage, listCategories]
   );
 
   // Memoize agent to avoid recreating on every connect
