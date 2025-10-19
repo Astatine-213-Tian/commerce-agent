@@ -132,3 +132,78 @@ An intelligent, AI-powered shopping assistant that provides a conversational com
 - Press button to enter voice conversation
 - Exit to see full transcript in chat
 - Uses OpenAI Realtime API with same tools and system prompt as text mode
+
+## 🤖 Agent API
+
+The AI agent has access to three tools for product discovery. See [`lib/agent-config.ts`](./lib/agent-config.ts) for the complete implementation.
+
+### **1. searchProductsByText**
+
+Search for products using natural language text queries.
+
+**Parameters:**
+- `textQuery` (string, required) - Search query (e.g., "wireless headphones", "red sneakers")
+- `minPrice` (number, optional) - Minimum price filter in dollars (inclusive)
+- `maxPrice` (number, optional) - Maximum price filter in dollars (inclusive)
+
+**Returns:**
+Array of up to 10 products ranked by relevance, each containing:
+- `name` - Product name
+- `brand` - Brand name
+- `price` - Price in dollars
+- `category` - Product category
+- `description` - Product description
+- `imageUrl` - Product image URL
+- `score` - Similarity score (0.3+ for text search)
+
+**Example:**
+```typescript
+searchProductsByText({
+  textQuery: "wireless headphones",
+  maxPrice: 200
+})
+```
+
+### **2. searchProductsByImage**
+
+Search for products similar to an uploaded image.
+
+**Parameters:**
+- `imageUrl` (string, required) - URL of the uploaded image
+- `minPrice` (number, optional) - Minimum price filter in dollars (inclusive)
+- `maxPrice` (number, optional) - Maximum price filter in dollars (inclusive)
+
+**Returns:**
+Array of up to 10 similar products, with the same structure as text search.
+- Similarity threshold: 0.5+ (stricter than text search)
+
+**Example:**
+```typescript
+searchProductsByImage({
+  imageUrl: "https://example.convex.cloud/image.jpg",
+  minPrice: 50
+})
+```
+
+### **3. listCategories**
+
+List all available product categories.
+
+**Parameters:**
+None
+
+**Returns:**
+Array of category objects:
+- `name` - Category name
+- `slug` - URL-friendly slug
+- `description` - Category description
+
+**Example:**
+```typescript
+listCategories()
+// Returns: [
+//   { name: "Electronics", slug: "electronics", description: "..." },
+//   { name: "Clothing", slug: "clothing", description: "..." },
+//   ...
+// ]
+```
