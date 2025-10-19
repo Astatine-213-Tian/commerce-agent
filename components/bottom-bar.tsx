@@ -5,9 +5,10 @@ import { UserInput } from "./user-input";
 import { AudioWaveform } from "./audio-waveform";
 import { Spinner } from "@/components/ui/spinner";
 import { Circle } from "lucide-react";
+import { ConnectionStatus } from "@/hooks/use-realtime-agent";
 
 interface BottomBarProps {
-  status: string;
+  status: ConnectionStatus;
   mediaStream: MediaStream | null;
   onStartSession: () => void;
   onDisconnect: () => void;
@@ -26,7 +27,7 @@ export function BottomBar({
   onMicChange,
 }: BottomBarProps) {
   // Disconnected state
-  if (status === "disconnected") {
+  if (status === ConnectionStatus.Disconnected) {
     return (
       <div className="fixed bottom-0 left-0 right-0 flex justify-center pb-6 px-4 pointer-events-none">
         <motion.div
@@ -50,7 +51,7 @@ export function BottomBar({
   }
 
   // Connecting state
-  if (status === "connecting") {
+  if (status === ConnectionStatus.Connecting) {
     return (
       <div className="fixed bottom-0 left-0 right-0 flex justify-center pb-6 px-4 pointer-events-none">
         <motion.div
@@ -97,7 +98,7 @@ export function BottomBar({
           <div className="flex-1 flex items-center gap-2 text-sm min-w-0">
             <AudioWaveform
               mediaStream={mediaStream}
-              isActive={status === "connected"}
+              isActive={status === ConnectionStatus.Connected}
             />
           </div>
           <Button variant="destructive" onClick={onDisconnect} size="sm" className="rounded-full shrink-0">

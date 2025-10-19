@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import useRealtimeAgent, { Message } from "@/hooks/use-realtime-agent";
+import useRealtimeAgent, { Message, ConnectionStatus } from "@/hooks/use-realtime-agent";
 import { MessageList, PreviousSessions } from "@/components/message-list";
 import { BottomBar } from "@/components/bottom-bar";
 import { WelcomeScreen } from "@/components/welcome-screen";
@@ -29,7 +29,7 @@ export default function Home() {
 
   // Handle error status
   useEffect(() => {
-    if (status === "error") {
+    if (status === ConnectionStatus.Error) {
       toast.error("Connection failed. Please try again.");
       disconnect();
     }

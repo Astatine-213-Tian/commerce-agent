@@ -19,7 +19,12 @@ export interface Message {
   imageUrl?: string;  // Single Convex storage URL for display and processing
 }
 
-export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export enum ConnectionStatus {
+  Disconnected = "disconnected",
+  Connecting = "connecting",
+  Connected = "connected",
+  Error = "error",
+}
 
 interface UseRealtimeAgentProps {
   onDisconnect?: (messages: Message[]) => void;
@@ -36,7 +41,7 @@ interface UseRealtimeAgentReturn {
 }
 
 export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps): UseRealtimeAgentReturn {
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.Disconnected);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<Message[]>([]);
@@ -75,7 +80,7 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
    */
   const connect = useCallback(async () => {
     try {
-      setStatus("connecting");
+      setStatus(ConnectionStatus.Connecting);
 
       // Get ephemeral token
       const response = await fetch("/api/ephemeral-token", {
@@ -184,17 +189,17 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
 
       session.on("error", (errorEvent) => {
         console.error("Session error:", errorEvent.error);
-        setStatus("error");
+        setStatus(ConnectionStatus.Error);
       });
 
       // Connect to OpenAI (WebRTC auto-configures mic and speaker)
       await session.connect({ apiKey: ephemeralKey });
 
-      setStatus("connected");
+      setStatus(ConnectionStatus.Connected);
       setIsConnected(true);
     } catch (error) {
       console.error("Failed to connect:", error);
-      setStatus("error");
+      setStatus(ConnectionStatus.Error);
       setIsConnected(false);
     }
   }, [agent]);
@@ -215,7 +220,7 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
     }
 
     const snapshotMessages = messagesRef.current;
-    setStatus("disconnected");
+    setStatus(ConnectionStatus.Disconnected);
     setIsConnected(false);
     setMessages([]);
 
