@@ -13,7 +13,8 @@ type VectorSearchResult = { _id: EmbeddingId; _score: number };
 // Constants
 const RESULT_LIMIT = 10;
 const SEARCH_LIMIT = 30; // Higher limit to account for price filtering
-const SIMILARITY_THRESHOLD = 0.5; // Minimum similarity score to include results
+const TEXT_SIMILARITY_THRESHOLD = 0.3; // Minimum similarity score for text search
+const IMAGE_SIMILARITY_THRESHOLD = 0.5; // Minimum similarity score for image search
 
 /**
  * Search products using text query with optional price filtering.
@@ -41,8 +42,14 @@ export const searchProductsByText = action({
       limit: SEARCH_LIMIT,
     });
 
+    console.log("[VECTOR SEARCH] Raw results count:", searchResults.length);
+    console.log("[VECTOR SEARCH] Score range:", {
+      highest: searchResults[0]?._score,
+      lowest: searchResults[searchResults.length - 1]?._score,
+    });
+
     // Fetch and format products with scores
-    return await fetchAndFormatProducts(ctx, searchResults, minPrice, maxPrice);
+    return await fetchAndFormatProducts(ctx, searchResults, TEXT_SIMILARITY_THRESHOLD, minPrice, maxPrice);
   },
 });
 
@@ -74,7 +81,7 @@ export const searchProductsByImage = action({
       limit: SEARCH_LIMIT,
     });
 
-    return await fetchAndFormatProducts(ctx, searchResults, minPrice, maxPrice);
+    return await fetchAndFormatProducts(ctx, searchResults, IMAGE_SIMILARITY_THRESHOLD, minPrice, maxPrice);
   },
 });
 
@@ -83,6 +90,7 @@ export const searchProductsByImage = action({
  *
  * @param ctx - Action context
  * @param searchResults - Vector search results with embedding IDs and scores
+ * @param similarityThreshold - Minimum similarity score to include results
  * @param minPrice - Optional minimum price filter
  * @param maxPrice - Optional maximum price filter
  * @returns Formatted and filtered product results
@@ -90,6 +98,7 @@ export const searchProductsByImage = action({
 async function fetchAndFormatProducts(
   ctx: ActionCtx,
   searchResults: VectorSearchResult[],
+  similarityThreshold: number,
   minPrice?: number,
   maxPrice?: number
 ): Promise<Array<ProductSearchResult>> {
@@ -103,27 +112,31 @@ async function fetchAndFormatProducts(
   const productMap = new Map(products.map((p) => [p.embeddingId, p]));
 
   // Format products with scores, filter by similarity threshold and price, and limit
-  return searchResults
-    .filter((result) => result._score >= SIMILARITY_THRESHOLD)
-    .map((result) => {
-      const product = productMap.get(result._id);
-      if (!product) return null;
-      return {
-        _id: product._id,
-        name: product.name,
-        brand: product.brand,
-        price: product.price,
-        category: product.categoryName,
-        description: product.description,
-        imageUrl: product.imageUrl,
-        score: result._score,
-      };
-    })
-    .filter(
-      (item): item is NonNullable<typeof item> =>
-        item !== null && matchesPriceFilter(item.price, minPrice, maxPrice)
-    )
-    .slice(0, RESULT_LIMIT);
+  const afterThreshold = searchResults.filter((result) => result._score >= similarityThreshold);
+  console.log("[FILTER] After threshold filter:", afterThreshold.length, "of", searchResults.length, "threshold:", similarityThreshold);
+
+  const mapped = afterThreshold.map((result) => {
+    const product = productMap.get(result._id);
+    if (!product) return null;
+    return {
+      _id: product._id,
+      name: product.name,
+      brand: product.brand,
+      price: product.price,
+      category: product.categoryName,
+      description: product.description,
+      imageUrl: product.imageUrl,
+      score: result._score,
+    };
+  });
+
+  const afterPriceFilter = mapped.filter(
+    (item): item is NonNullable<typeof item> =>
+      item !== null && matchesPriceFilter(item.price, minPrice, maxPrice)
+  );
+  console.log("[FILTER] After price filter:", afterPriceFilter.length, "minPrice:", minPrice, "maxPrice:", maxPrice);
+
+  return afterPriceFilter.slice(0, RESULT_LIMIT);
 }
 
 /**

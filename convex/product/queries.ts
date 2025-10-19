@@ -2,6 +2,28 @@ import { internalQuery, query } from "../_generated/server";
 import { v } from "convex/values";
 import { asyncMap } from "convex-helpers";
 
+// Public query to get all products with category names
+export const getAllProducts = query({
+  handler: async (ctx) => {
+    const products = await ctx.db.query("products").collect();
+
+    const productsWithCategories = await asyncMap(products, async (product) => {
+      const category = await ctx.db.get(product.categoryId);
+      return {
+        _id: product._id,
+        name: product.name,
+        brand: product.brand,
+        description: product.description,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        categoryName: category?.name || "Unknown",
+      };
+    });
+
+    return productsWithCategories;
+  },
+});
+
 // Internal query to check if a product exists by categoryId and name
 export const getProductByName = internalQuery({
   args: {

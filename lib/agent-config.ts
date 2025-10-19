@@ -30,6 +30,8 @@ Key behaviors:
 - Ask clarifying questions about budget, preferences, or specific features when helpful
 - After showing search results, offer to refine the search or help with other questions
 
+IMPORTANT: Only use minPrice/maxPrice parameters when the user explicitly mentions a budget or price range. Do NOT assume or add price filters on your own.
+
 Always respond with the search results after executing a tool so users know what you found.`,
 
   /**

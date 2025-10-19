@@ -16,14 +16,7 @@ export default function Home() {
     setPrevSessions((prev) => [...prev, messages]);
   }, []);
 
-  const {
-    status,
-    messages,
-    mediaStream,
-    connect,
-    disconnect,
-    sendMessage,
-  } = useRealtimeAgent({
+  const { status, messages, mediaStream, connect, disconnect, sendMessage } = useRealtimeAgent({
     onDisconnect: handleDisconnect,
   });
 
@@ -45,20 +38,20 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-1 overflow-y-auto">
-        {/* Show welcome screen when no messages at all */}
-        {prevSessions.length === 0 && messages.length === 0 ? (
-          <WelcomeScreen />
-        ) : (
-          <>
-            {/* Render previous sessions with separators */}
-            <PreviousSessions sessions={prevSessions} />
-            {/* Render current session */}
-            <MessageList messages={messages} />
-          </>
-        )}
-      </div>
+    <div className="flex flex-col h-full">
+      {/* Show welcome screen when no messages at all */}
+      {prevSessions.length === 0 && messages.length === 0 ? (
+        <WelcomeScreen />
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          {/* Render previous sessions with separators */}
+          <PreviousSessions sessions={prevSessions} />
+          {/* Render current session */}
+          <MessageList messages={messages} />
+          {/* Push some space to prevent messages from being hidden by the bottom bar*/}
+          <div className="h-44 w-full" />
+        </div>
+      )}
       <BottomBar
         status={status}
         mediaStream={mediaStream}

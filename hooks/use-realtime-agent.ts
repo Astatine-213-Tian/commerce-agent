@@ -12,11 +12,15 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { createAgentTools, AGENT_CONFIG } from "@/lib/agent-config";
 
+// ============================================================================
+// Types & Exports
+// ============================================================================
+
 export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  imageUrl?: string;  // Single Convex storage URL for display and processing
+  imageUrl?: string;
 }
 
 export enum ConnectionStatus {
@@ -40,31 +44,44 @@ interface UseRealtimeAgentReturn {
   sendMessage: (text: string, imageUrl?: string) => void;
 }
 
-export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps): UseRealtimeAgentReturn {
+// ============================================================================
+// Main Hook
+// ============================================================================
+
+export default function useRealtimeAgent({
+  onDisconnect,
+}: UseRealtimeAgentProps): UseRealtimeAgentReturn {
+  // --------------------------------------------------------------------------
+  // State
+  // --------------------------------------------------------------------------
   const [status, setStatus] = useState<ConnectionStatus>(ConnectionStatus.Disconnected);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+
   const messagesRef = useRef<Message[]>([]);
+  const sessionRef = useRef<RealtimeSession | null>(null);
+
+  // Sync messages to ref for disconnect callback
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-
-  const sessionRef = useRef<RealtimeSession | null>(null);
-
-  // Convex action hooks
+  // --------------------------------------------------------------------------
+  // Convex Hooks
+  // --------------------------------------------------------------------------
   const searchByText = useAction(api.product.actions.searchProductsByText);
   const searchByImage = useAction(api.product.actions.searchProductsByImage);
   const listCategories = useQuery(api.category.queries.listCategories);
 
-  // Memoize tools to avoid recreating on every render
+  // --------------------------------------------------------------------------
+  // Memoized Values
+  // --------------------------------------------------------------------------
   const tools = useMemo(
     () => createAgentTools(searchByText, searchByImage, () => Promise.resolve(listCategories || [])),
     [searchByText, searchByImage, listCategories]
   );
 
-  // Memoize agent to avoid recreating on every connect
   const agent = useMemo(
     () =>
       new RealtimeAgent({
@@ -75,38 +92,110 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
     [tools]
   );
 
+  // --------------------------------------------------------------------------
+  // Message Update Utility
+  // --------------------------------------------------------------------------
+  const updateMessageById = useCallback((messageId: string, updater: (msg: Message) => Message) => {
+    setMessages((prev) => {
+      const index = prev.findIndex((m) => m.id === messageId);
+      if (index < 0) return prev;
+
+      const updated = [...prev];
+      updated[index] = updater(updated[index]);
+      return updated;
+    });
+  }, []);
+
+  // --------------------------------------------------------------------------
+  // Event Handlers
+  // --------------------------------------------------------------------------
+  const handleInputAudioTranscription = useCallback(
+    (event: { item_id: string; transcript: string }) => {
+      console.log("[EVENT] input_audio_transcription.completed:", event);
+      updateMessageById(event.item_id, (msg) => ({
+        ...msg,
+        content: event.transcript,
+      }));
+    },
+    [updateMessageById]
+  );
+
+  const handleOutputAudioTranscription = useCallback(
+    (event: { item_id: string; delta: string }) => {
+      console.log("[EVENT] response.output_audio_transcript.delta:", event);
+      updateMessageById(event.item_id, (msg) => ({
+        ...msg,
+        content: (msg.content || "") + event.delta,
+      }));
+    },
+    [updateMessageById]
+  );
+
+  const handleHistoryAdded = useCallback((item: RealtimeItem) => {
+    console.log("[EVENT] history_added:", item);
+    if (item.type !== "message") return;
+
+    const messageItem = item as RealtimeMessageItem;
+    const extracted = extractMessageContent(messageItem);
+
+    const newMessage: Message = {
+      id: messageItem.itemId || Date.now().toString(),
+      role: messageItem.role,
+      content: extracted?.content || "",
+      imageUrl: extracted?.imageUrl,
+    };
+
+    setMessages((prev) => {
+      const existingIndex = prev.findIndex((m) => m.id === newMessage.id);
+      if (existingIndex >= 0) return prev; // Don't overwrite existing
+      return [...prev, newMessage];
+    });
+  }, []);
+
+  const handleSessionError = useCallback((error: unknown) => {
+    console.error("Session error:", error);
+    setStatus(ConnectionStatus.Error);
+  }, []);
+
+  // --------------------------------------------------------------------------
+  // Session Setup Helpers
+  // --------------------------------------------------------------------------
   /**
-   * Connect to the realtime session
+   * Fetches an ephemeral token from the API
    */
-  const connect = useCallback(async () => {
-    try {
-      setStatus(ConnectionStatus.Connecting);
+  const getEphemeralToken = useCallback(async (): Promise<string> => {
+    const response = await fetch("/api/ephemeral-token", { method: "POST" });
 
-      // Get ephemeral token
-      const response = await fetch("/api/ephemeral-token", {
-        method: "POST",
-      });
+    if (!response.ok) {
+      throw new Error(`Failed to get ephemeral token: ${response.status}`);
+    }
 
-      if (!response.ok) {
-        throw new Error(`Failed to get ephemeral token: ${response.status}`);
-      }
+    const data = await response.json();
+    return data.value;
+  }, []);
 
-      const data = await response.json();
-      const ephemeralKey = data.value;
+  /**
+   * Sets up the microphone media stream
+   */
+  const setupMediaStream = useCallback(async (): Promise<MediaStream> => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setMediaStream(stream);
+    return stream;
+  }, []);
 
-      // Get microphone stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMediaStream(stream);
-
-      // Create custom WebRTC transport with our mediaStream
+  /**
+   * Creates and configures a RealtimeSession
+   */
+  const createRealtimeSession = useCallback(
+    (stream: MediaStream): RealtimeSession => {
       const audioElement = document.createElement("audio");
       audioElement.autoplay = true;
+
       const transport = new OpenAIRealtimeWebRTC({
         mediaStream: stream,
         audioElement,
       });
 
-      // Create session with transcription enabled
       const session = new RealtimeSession(agent, {
         model: AGENT_CONFIG.model,
         transport,
@@ -117,83 +206,60 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
         },
       });
 
-      sessionRef.current = session;
+      return session;
+    },
+    [agent]
+  );
 
-      // Listen for input audio transcription (user speech)
+  /**
+   * Attaches all event listeners to the session
+   */
+  const setupSessionEventListeners = useCallback(
+    (session: RealtimeSession) => {
+      // User speech transcription
       session.transport.on(
         "conversation.item.input_audio_transcription.completed",
-        (event) => {
-          console.log("[EVENT] input_audio_transcription.completed:", event);
-          setMessages((prev) => {
-            const messageIndex = prev.findIndex((m) => m.id === event.item_id);
-            if (messageIndex >= 0) {
-              const updated = [...prev];
-              updated[messageIndex] = {
-                ...updated[messageIndex],
-                content: event.transcript,
-              };
-              return updated;
-            }
-            return prev;
-          });
-        }
+        handleInputAudioTranscription
       );
 
-      // Listen for response audio transcription (assistant speech)
+      // Assistant speech transcription (streaming)
       session.transport.on(
         "response.output_audio_transcript.delta",
-        (event) => {
-          console.log("[EVENT] response.output_audio_transcript.delta:", event);
-          setMessages((prev) => {
-            const messageIndex = prev.findIndex((m) => m.id === event.item_id);
-            if (messageIndex >= 0) {
-              const updated = [...prev];
-              updated[messageIndex] = {
-                ...updated[messageIndex],
-                content: (updated[messageIndex].content || "") + event.delta,
-              };
-              return updated;
-            }
-            return prev;
-          });
-        }
+        handleOutputAudioTranscription
       );
 
+      // New messages added to history
+      session.on("history_added", handleHistoryAdded);
 
-      // Listen for history updates to create message placeholders
-      session.on("history_added", (item: RealtimeItem) => {
-        console.log("[EVENT] history_added:", item);
-        if (item.type !== "message") return;
+      // Session errors
+      session.on("error", handleSessionError);
+    },
+    [
+      handleInputAudioTranscription,
+      handleOutputAudioTranscription,
+      handleHistoryAdded,
+      handleSessionError,
+    ]
+  );
 
-        const messageItem = item as RealtimeMessageItem;
-        const extracted = extractMessageContent(messageItem);
+  // --------------------------------------------------------------------------
+  // Public API
+  // --------------------------------------------------------------------------
+  /**
+   * Connects to the OpenAI Realtime API
+   */
+  const connect = useCallback(async () => {
+    try {
+      setStatus(ConnectionStatus.Connecting);
 
-        // Create message with content if available (e.g., text messages)
-        // Audio messages will be updated later by transcription events
-        const newMessage: Message = {
-          id: messageItem.itemId || Date.now().toString(),
-          role: messageItem.role,
-          content: extracted?.content || "",
-          imageUrl: extracted?.imageUrl,
-        };
+      const token = await getEphemeralToken();
+      const stream = await setupMediaStream();
+      const session = createRealtimeSession(stream);
 
-        setMessages((prev) => {
-          // Update existing message if it exists, otherwise add new
-          const existingIndex = prev.findIndex((m) => m.id === newMessage.id);
-          if (existingIndex >= 0) {
-            return prev; // Don't overwrite existing messages
-          }
-          return [...prev, newMessage];
-        });
-      });
+      setupSessionEventListeners(session);
+      sessionRef.current = session;
 
-      session.on("error", (errorEvent) => {
-        console.error("Session error:", errorEvent.error);
-        setStatus(ConnectionStatus.Error);
-      });
-
-      // Connect to OpenAI (WebRTC auto-configures mic and speaker)
-      await session.connect({ apiKey: ephemeralKey });
+      await session.connect({ apiKey: token });
 
       setStatus(ConnectionStatus.Connected);
       setIsConnected(true);
@@ -202,10 +268,10 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
       setStatus(ConnectionStatus.Error);
       setIsConnected(false);
     }
-  }, [agent]);
+  }, [getEphemeralToken, setupMediaStream, createRealtimeSession, setupSessionEventListeners]);
 
   /**
-   * Disconnect from the session
+   * Disconnects from the session and cleans up resources
    */
   const disconnect = useCallback(() => {
     if (sessionRef.current) {
@@ -213,7 +279,6 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
       sessionRef.current = null;
     }
 
-    // Stop microphone tracks
     if (mediaStream) {
       mediaStream.getTracks().forEach((track) => track.stop());
       setMediaStream(null);
@@ -230,7 +295,7 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
   }, [onDisconnect, mediaStream]);
 
   /**
-   * Send a message with optional image
+   * Sends a text message with optional image URL
    */
   const sendMessage = useCallback((text: string, imageUrl?: string) => {
     if (!sessionRef.current) {
@@ -239,25 +304,29 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
     }
 
     if (imageUrl) {
-      // Send plain text with image URL, agent will extract it
       const message = text
         ? `${text} [Image URL: ${imageUrl}]`
         : `Search for products similar to this image. [Image URL: ${imageUrl}]`;
       sessionRef.current.sendMessage(message);
     } else {
-      // Send regular text message
       sessionRef.current.sendMessage(text);
     }
   }, []);
 
-  // Cleanup on unmount
+  // --------------------------------------------------------------------------
+  // Cleanup
+  // --------------------------------------------------------------------------
   useEffect(() => {
     return () => {
       console.log("[DEBUG] cleanup on unmount");
       disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // --------------------------------------------------------------------------
+  // Return
+  // --------------------------------------------------------------------------
   return {
     status,
     isConnected,
@@ -269,8 +338,12 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
   };
 }
 
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
 /**
- * Extract content from a RealtimeMessageItem
+ * Extracts content and imageUrl from a RealtimeMessageItem
  */
 function extractMessageContent(messageItem: RealtimeMessageItem): {
   content: string;
@@ -281,19 +354,15 @@ function extractMessageContent(messageItem: RealtimeMessageItem): {
   if (Array.isArray(messageItem.content)) {
     for (const contentItem of messageItem.content) {
       if (contentItem.type === "input_audio") {
-        // User speech transcription
         content = contentItem.transcript || "";
         break;
       } else if (contentItem.type === "output_audio") {
-        // Assistant speech transcription
         content = contentItem.transcript || "";
         break;
       } else if (contentItem.type === "input_text") {
-        // User text input
         content = contentItem.text || "";
         break;
       } else if (contentItem.type === "output_text") {
-        // Assistant text output
         content = contentItem.text || "";
         break;
       }
@@ -307,7 +376,6 @@ function extractMessageContent(messageItem: RealtimeMessageItem): {
   const imageUrlMatch = content.match(/\[Image URL: (https:\/\/[^\]]+)\]/);
   if (imageUrlMatch) {
     imageUrl = imageUrlMatch[1];
-    // Remove the [Image URL: ...] tag from content
     content = content.replace(imageUrlMatch[0], "").trim();
   }
 
