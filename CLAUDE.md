@@ -110,3 +110,4 @@ Additional variables needed (not yet in .env.local):
 - Target: ES2017
 - Strict mode enabled
 - Module resolution: bundler (for Next.js)
+- helper function should be put at the end of the file put the main function on the top

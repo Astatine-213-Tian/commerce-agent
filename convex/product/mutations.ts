@@ -14,8 +14,21 @@ export const insertProduct = internalMutation({
     imageEmbedding: v.array(v.float64()),
   },
   handler: async (ctx, args) => {
+    // First, create the embedding entry in separate table
+    const embeddingId = await ctx.db.insert("productEmbeddings", {
+      textEmbedding: args.textEmbedding,
+      imageEmbedding: args.imageEmbedding,
+    });
+
+    // Then, insert the product with reference to embedding
     await ctx.db.insert("products", {
-      ...args,
+      name: args.name,
+      brand: args.brand,
+      description: args.description,
+      price: args.price,
+      category: args.category,
+      imageUrl: args.imageUrl,
+      embeddingId,
       createdAt: Date.now(),
     });
   },

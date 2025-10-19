@@ -2,50 +2,18 @@
 
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { ConvexError } from "convex/values";
 import OpenAI from "openai";
 import { mockProducts } from "./products";
+import {
+  generateTextEmbedding,
+  generateImageDescription,
+  generateImagePrompt,
+} from "../lib/openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Helper function to generate DALL-E prompt from product info
-function generateImagePrompt(productName: string, category: string): string {
-  return `Professional product photography of ${productName}. Clean white background, studio lighting, high quality, ${category.toLowerCase()} product, square composition, centered, commercial photography style.`;
-}
-
-// Helper function to generate text embedding
-async function generateTextEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-  });
-  return response.data[0].embedding;
-}
-
-// Helper function to generate image description using Vision API
-async function generateImageDescription(imageUrl: string): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "Describe this product image in detail, focusing on visual features, colors, materials, and overall appearance. Be concise but thorough.",
-          },
-          {
-            type: "image_url",
-            image_url: { url: imageUrl },
-          },
-        ],
-      },
-    ],
-    max_tokens: 300,
-  });
-  return response.choices[0].message.content || "";
-}
 
 // Main seeding action
 export const seedAllProducts = internalAction({
@@ -58,6 +26,17 @@ export const seedAllProducts = internalAction({
       console.log(`\n[${i + 1}/${mockProducts.length}] Processing: ${product.name}`);
 
       try {
+        // Check if product already exists
+        const existingProduct = await ctx.runQuery(
+          internal.product.queries.getProductByName,
+          { category: product.category, name: product.name }
+        );
+
+        if (existingProduct) {
+          console.log(`  ⏭️  Product already exists, skipping...`);
+          continue;
+        }
+
         // Step 1: Generate product image with gpt-image-1-mini
         console.log("  - Generating image with gpt-image-1-mini...");
         const imagePrompt = generateImagePrompt(product.name, product.category);
@@ -71,12 +50,12 @@ export const seedAllProducts = internalAction({
         });
 
         if (!imageResponse.data || imageResponse.data.length === 0) {
-          throw new Error("No image data returned from gpt-image-1-mini");
+          throw new ConvexError("No image data returned from gpt-image-1-mini");
         }
 
         const b64Image = imageResponse.data[0].b64_json;
         if (!b64Image) {
-          throw new Error("No base64 image data returned from gpt-image-1-mini");
+          throw new ConvexError("No base64 image data returned from gpt-image-1-mini");
         }
 
         // Step 2: Convert base64 to blob and store in Convex storage
@@ -84,6 +63,11 @@ export const seedAllProducts = internalAction({
         const imageBuffer = Buffer.from(b64Image, "base64");
         const imageBlob = new Blob([imageBuffer], { type: "image/png" });
         const storageId = await ctx.storage.store(imageBlob);
+        const imageUrl = await ctx.storage.getUrl(storageId);
+
+        if (!imageUrl) {
+          throw new ConvexError("Failed to get URL for stored image");
+        }
 
         // Step 3: Generate image description using Vision API
         // For Vision API, we need to convert base64 to data URL
@@ -102,13 +86,13 @@ export const seedAllProducts = internalAction({
 
         // Step 6: Insert product into database
         console.log("  - Inserting into database...");
-        await ctx.runMutation(internal.seed.insertProduct.insertProduct, {
+        await ctx.runMutation(internal.product.mutations.insertProduct, {
           name: product.name,
           brand: product.brand,
           description: product.description,
           price: product.price,
           category: product.category,
-          imageUrl: storageId,
+          imageUrl,
           textEmbedding,
           imageEmbedding,
         });

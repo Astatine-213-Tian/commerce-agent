@@ -8,9 +8,13 @@
  * @module
  */
 
-import type * as seed_insertProduct from "../seed/insertProduct.js";
+import type * as lib_openai from "../lib/openai.js";
+import type * as product_actions from "../product/actions.js";
+import type * as product_mutations from "../product/mutations.js";
+import type * as product_queries from "../product/queries.js";
 import type * as seed_products from "../seed/products.js";
 import type * as seed_seed from "../seed/seed.js";
+import type * as storage_mutations from "../storage/mutations.js";
 
 import type {
   ApiFromModules,
@@ -27,9 +31,13 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  "seed/insertProduct": typeof seed_insertProduct;
+  "lib/openai": typeof lib_openai;
+  "product/actions": typeof product_actions;
+  "product/mutations": typeof product_mutations;
+  "product/queries": typeof product_queries;
   "seed/products": typeof seed_products;
   "seed/seed": typeof seed_seed;
+  "storage/mutations": typeof storage_mutations;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 
