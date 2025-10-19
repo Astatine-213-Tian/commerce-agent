@@ -42,14 +42,10 @@ export const searchProductsByText = action({
       limit: SEARCH_LIMIT,
     });
 
-    console.log("[VECTOR SEARCH] Raw results count:", searchResults.length);
-    console.log("[VECTOR SEARCH] Score range:", {
-      highest: searchResults[0]?._score,
-      lowest: searchResults[searchResults.length - 1]?._score,
-    });
-
     // Fetch and format products with scores
-    return await fetchAndFormatProducts(ctx, searchResults, TEXT_SIMILARITY_THRESHOLD, minPrice, maxPrice);
+    const products = await fetchAndFormatProducts(ctx, searchResults, TEXT_SIMILARITY_THRESHOLD, minPrice, maxPrice);
+    console.log("[TEXT SEARCH] Products:", JSON.stringify(products, null, 2));
+    return products;
   },
 });
 
@@ -81,7 +77,9 @@ export const searchProductsByImage = action({
       limit: SEARCH_LIMIT,
     });
 
-    return await fetchAndFormatProducts(ctx, searchResults, IMAGE_SIMILARITY_THRESHOLD, minPrice, maxPrice);
+    const products = await fetchAndFormatProducts(ctx, searchResults, IMAGE_SIMILARITY_THRESHOLD, minPrice, maxPrice);
+    console.log("[IMAGE SEARCH] Products:", JSON.stringify(products, null, 2));
+    return products;
   },
 });
 
@@ -113,7 +111,6 @@ async function fetchAndFormatProducts(
 
   // Format products with scores, filter by similarity threshold and price, and limit
   const afterThreshold = searchResults.filter((result) => result._score >= similarityThreshold);
-  console.log("[FILTER] After threshold filter:", afterThreshold.length, "of", searchResults.length, "threshold:", similarityThreshold);
 
   const mapped = afterThreshold.map((result) => {
     const product = productMap.get(result._id);
@@ -134,7 +131,6 @@ async function fetchAndFormatProducts(
     (item): item is NonNullable<typeof item> =>
       item !== null && matchesPriceFilter(item.price, minPrice, maxPrice)
   );
-  console.log("[FILTER] After price filter:", afterPriceFilter.length, "minPrice:", minPrice, "maxPrice:", maxPrice);
 
   return afterPriceFilter.slice(0, RESULT_LIMIT);
 }
