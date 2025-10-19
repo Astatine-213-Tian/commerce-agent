@@ -1,12 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 
 export interface ProductCardProps {
   name: string;
   brand: string;
   price: number;
-  category: string;
   description: string;
   imageUrl: string;
 }
@@ -15,7 +13,6 @@ export function ProductCard({
   name,
   brand,
   price,
-  category,
   description,
   imageUrl,
 }: ProductCardProps) {
@@ -42,9 +39,6 @@ export function ProductCard({
           <p className="text-xs text-muted-foreground line-clamp-2">
             {description}
           </p>
-          <Badge variant="secondary" className="text-xs">
-            {category}
-          </Badge>
         </div>
       </CardContent>
     </Card>

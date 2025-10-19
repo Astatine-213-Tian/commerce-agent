@@ -2,25 +2,18 @@ import { internalQuery, query } from "../_generated/server";
 import { v } from "convex/values";
 import { asyncMap } from "convex-helpers";
 
-// Public query to get all products with category names
-export const getAllProducts = query({
-  handler: async (ctx) => {
-    const products = await ctx.db.query("products").collect();
+// Public query to get products by category
+export const getProductsByCategory = query({
+  args: {
+    categoryId: v.id("categories"),
+  },
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_categoryId", (q) => q.eq("categoryId", args.categoryId))
+      .collect();
 
-    const productsWithCategories = await asyncMap(products, async (product) => {
-      const category = await ctx.db.get(product.categoryId);
-      return {
-        _id: product._id,
-        name: product.name,
-        brand: product.brand,
-        description: product.description,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        categoryName: category?.name || "Unknown",
-      };
-    });
-
-    return productsWithCategories;
+    return products;
   },
 });
 
