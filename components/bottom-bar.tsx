@@ -10,8 +10,7 @@ interface BottomBarProps {
   status: string;
   mediaStream: MediaStream | null;
   onStartSession: () => void;
-  onEndSession: () => void;
-  onCancelConnection: () => void;
+  onDisconnect: () => void;
   onSendText: (text: string) => void;
   selectedMicId: string | undefined;
   onMicChange: (deviceId: string) => void;
@@ -21,8 +20,7 @@ export function BottomBar({
   status,
   mediaStream,
   onStartSession,
-  onEndSession,
-  onCancelConnection,
+  onDisconnect,
   onSendText,
   selectedMicId,
   onMicChange,
@@ -65,7 +63,7 @@ export function BottomBar({
               <Spinner className="mr-2" />
               Connecting...
             </Button>
-            <Button variant="destructive" onClick={onCancelConnection} className="rounded-full">
+            <Button variant="destructive" onClick={onDisconnect} className="rounded-full">
               ✕ Cancel
             </Button>
           </div>
@@ -102,7 +100,7 @@ export function BottomBar({
               isActive={status === "connected"}
             />
           </div>
-          <Button variant="destructive" onClick={onEndSession} size="sm" className="rounded-full shrink-0">
+          <Button variant="destructive" onClick={onDisconnect} size="sm" className="rounded-full shrink-0">
             ✕ End Session
           </Button>
         </div>

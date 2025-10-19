@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   RealtimeAgent,
   RealtimeSession,
@@ -20,6 +20,10 @@ export interface Message {
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
+interface UseRealtimeAgentProps {
+  onDisconnect?: (messages: Message[]) => void;
+}
+
 interface UseRealtimeAgentReturn {
   status: ConnectionStatus;
   isConnected: boolean;
@@ -30,10 +34,15 @@ interface UseRealtimeAgentReturn {
   sendText: (text: string) => void;
 }
 
-export default function useRealtimeAgent(): UseRealtimeAgentReturn {
+export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps): UseRealtimeAgentReturn {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const sessionRef = useRef<RealtimeSession | null>(null);
@@ -62,7 +71,7 @@ export default function useRealtimeAgent(): UseRealtimeAgentReturn {
   /**
    * Connect to the realtime session
    */
-  async function connect() {
+  const connect = useCallback(async () => {
     try {
       setStatus("connecting");
 
@@ -185,12 +194,12 @@ export default function useRealtimeAgent(): UseRealtimeAgentReturn {
       setStatus("error");
       setIsConnected(false);
     }
-  }
+  }, [agent]);
 
   /**
    * Disconnect from the session
    */
-  function disconnect() {
+  const disconnect = useCallback(() => {
     if (sessionRef.current) {
       sessionRef.current.close();
       sessionRef.current = null;
@@ -202,15 +211,20 @@ export default function useRealtimeAgent(): UseRealtimeAgentReturn {
       setMediaStream(null);
     }
 
+    const snapshotMessages = messagesRef.current;
     setStatus("disconnected");
     setIsConnected(false);
     setMessages([]);
-  }
+
+    if (onDisconnect && snapshotMessages.length > 0) {
+      onDisconnect(snapshotMessages);
+    }
+  }, [onDisconnect, mediaStream]);
 
   /**
    * Send a text message
    */
-  function sendText(text: string) {
+  const sendText = useCallback((text: string) => {
     if (!sessionRef.current) {
       console.error("No active session");
       return;
@@ -218,11 +232,12 @@ export default function useRealtimeAgent(): UseRealtimeAgentReturn {
 
     // Send to agent (SDK will add it to history via history_added event)
     sessionRef.current.sendMessage(text);
-  }
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      console.log("[DEBUG] cleanup on unmount");
       disconnect();
     };
   }, []);
