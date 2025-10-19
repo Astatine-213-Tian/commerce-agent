@@ -93,11 +93,11 @@ An intelligent, AI-powered shopping assistant that provides a conversational com
 
 ### **AI/ML**
 - **[OpenAI API](https://openai.com/api/)**
-  - **Realtime API**: Real-time streaming responses for both text and voice modes
+  - **Realtime API**: Real-time streaming responses for both text and voice modes via WebRTC
   - **Function Calling**: Structured tool use for product searches
   - **Vision API**: Image analysis and understanding
   - **Embeddings API**: Semantic search capabilities
-  - **Voice Support**: Native voice conversations through Realtime API
+  - **Voice Support**: Native voice conversations through Realtime API with WebRTC transport
 
 ## 🏗 Architecture Decisions
 
@@ -131,7 +131,8 @@ An intelligent, AI-powered shopping assistant that provides a conversational com
 - ChatGPT-like experience with dedicated voice mode
 - Press button to enter voice conversation
 - Exit to see full transcript in chat
-- Uses OpenAI Realtime API with same tools and system prompt as text mode
+- Uses OpenAI Realtime API with WebRTC transport for low-latency audio streaming
+- Same tools and system prompt as text mode for consistent experience
 
 ## 🤖 Agent API
 
