@@ -8,6 +8,10 @@
  * @module
  */
 
+import type * as seed_insertProduct from "../seed/insertProduct.js";
+import type * as seed_products from "../seed/products.js";
+import type * as seed_seed from "../seed/seed.js";
+
 import type {
   ApiFromModules,
   FilterApi,
@@ -22,7 +26,11 @@ import type {
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "seed/insertProduct": typeof seed_insertProduct;
+  "seed/products": typeof seed_products;
+  "seed/seed": typeof seed_seed;
+}>;
 declare const fullApiWithMounts: typeof fullApi;
 
 export declare const api: FilterApi<

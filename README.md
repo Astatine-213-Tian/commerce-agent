@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Commerce Agent
 
-## Getting Started
+An intelligent, AI-powered shopping assistant that provides a conversational commerce experience similar to Amazon Rufus. The agent helps users discover products through natural language conversations, text-based recommendations, and image-based search.
 
-First, run the development server:
+## ✨ Core Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. **General Conversation** - Natural language chat about the agent's capabilities ("What can you help me with?")
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Text-Based Product Recommendation** - Intelligent product search from queries ("I need a waterproof jacket for hiking")
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Image-Based Product Search** - Upload an image to find similar products (Upload shoe photo → find similar styles)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠 Tech Stack
 
-## Learn More
+### **Frontend**
+- **[Next.js 14](https://nextjs.org/)** (App Router)
+  - Server-side rendering for optimal performance
+  - Built-in API routes for backend integration
+  - Excellent developer experience with hot reload
+  - SEO-friendly for commerce applications
 
-To learn more about Next.js, take a look at the following resources:
+- **[Tailwind CSS](https://tailwindcss.com/)** + **[shadcn/ui](https://ui.shadcn.com/)**
+  - Rapid UI development with utility classes
+  - Beautiful, accessible component library
+  - Consistent design system out of the box
+  - Fully customizable and production-ready components
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### **Backend & Database**
+- **[Convex](https://convex.dev/)**
+  - **Vector Search**: Built-in vector indexing for semantic product search
+  - **Real-time Sync**: Live updates without polling
+  - **Type Safety**: End-to-end TypeScript with auto-generated types
+  - **Simple Setup**: No separate database or backend deployment needed
+  - **React Hooks**: First-class React integration with `useQuery` and `useMutation`
+  - **Serverless**: Automatic scaling with no infrastructure management
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### **AI/ML**
+- **[OpenAI API](https://openai.com/api/)**
+  - **GPT-4**: Advanced reasoning for natural conversations
+  - **Realtime API**: Real-time streaming responses for both text and voice modes
+  - **Function Calling**: Structured tool use for product searches
+  - **Vision API**: Image analysis and understanding
+  - **Embeddings API**: Semantic search capabilities
+  - **Voice Support**: Native voice conversations through Realtime API
 
-## Deploy on Vercel
+## 🏗 Architecture Decisions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### **Unified Agent Design**
+- Single AI agent handles all three features rather than separate specialized agents
+- Consistent personality and behavior across all interaction modes
+- Shared system prompt ensures uniform experience
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### **Separation of Concerns**
+- **Commerce Backend**: Simple data retrieval layer (Convex)
+  - Vector search for products
+  - Basic CRUD operations
+  - No business logic
+- **AI Layer**: All intelligence and decision-making (OpenAI Realtime API)
+  - Intent understanding
+  - Product comparison logic
+  - Recommendation algorithms
+  - Conversation management
+
+### **Tool Design Philosophy**
+- Backend provides only data retrieval tools
+- AI handles all reasoning, comparisons, and recommendations
+
+### **Image Search Strategy**
+- User uploads image → OpenAI Vision API for description
+- Generate text embedding from description
+- Use same vector search infrastructure as text queries
+- Unified search experience regardless of input type
+
+### **Voice Mode Architecture**
+- ChatGPT-like experience with dedicated voice mode
+- Press button to enter voice conversation
+- Exit to see full transcript in chat
+- Uses OpenAI Realtime API with same tools and system prompt as text mode
