@@ -30,6 +30,12 @@ Key behaviors:
 - Ask clarifying questions about budget, preferences, or specific features when helpful
 - After showing search results, offer to refine the search or help with other questions
 
+Category Filtering:
+- Both search tools support optional categoryId filtering to narrow results to a specific category
+- When users mention a category (e.g., "headphones", "electronics"), call listCategories first to get the category ID
+- Then use that categoryId in your search to filter results to that category only
+- Category filtering is optional - only use it when the user specifies or implies a category preference
+
 IMPORTANT: Only use minPrice/maxPrice parameters when the user explicitly mentions a budget or price range. Do NOT assume or add price filters on your own.
 
 Always respond with the search results after executing a tool so users know what you found.`,
@@ -54,11 +60,13 @@ export function createAgentTools(
     textQuery: string;
     minPrice?: number;
     maxPrice?: number;
+    categoryId?: string;
   }) => Promise<ProductSearchResult[]>,
   searchByImage: (args: {
     imageUrl: string;
     minPrice?: number;
     maxPrice?: number;
+    categoryId?: string;
   }) => Promise<ProductSearchResult[]>,
   listCategories: () => Promise<Category[]>
 ) {
@@ -80,18 +88,25 @@ export function createAgentTools(
         .nullable()
         .optional()
         .describe("Optional maximum price filter in dollars (inclusive)"),
+      categoryId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Optional category ID to filter results to a specific category. Get category IDs from listCategories tool."),
     }),
     execute: async (input) => {
       console.log("[TOOL CALL] searchProductsByText", {
         textQuery: input.textQuery,
         minPrice: input.minPrice,
         maxPrice: input.maxPrice,
+        categoryId: input.categoryId,
       });
       try {
         const results = await searchByText({
           textQuery: input.textQuery,
           minPrice: input.minPrice ?? undefined,
           maxPrice: input.maxPrice ?? undefined,
+          categoryId: input.categoryId ?? undefined,
         });
         console.log("[TOOL RESULT] searchProductsByText", {
           count: results.length,
@@ -123,18 +138,25 @@ export function createAgentTools(
         .nullable()
         .optional()
         .describe("Optional maximum price filter in dollars (inclusive)"),
+      categoryId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Optional category ID to filter results to a specific category. Get category IDs from listCategories tool."),
     }),
     execute: async (input) => {
       console.log("[TOOL CALL] searchProductsByImage", {
         imageUrl: input.imageUrl,
         minPrice: input.minPrice,
         maxPrice: input.maxPrice,
+        categoryId: input.categoryId,
       });
       try {
         const results = await searchByImage({
           imageUrl: input.imageUrl,
           minPrice: input.minPrice ?? undefined,
           maxPrice: input.maxPrice ?? undefined,
+          categoryId: input.categoryId ?? undefined,
         });
         console.log("[TOOL RESULT] searchProductsByImage", {
           count: results.length,

@@ -122,7 +122,7 @@ export default function useRealtimeAgent({
 
   const handleOutputAudioTranscription = useCallback(
     (event: { item_id: string; delta: string }) => {
-      console.log("[EVENT] response.output_audio_transcript.delta:", event);
+      // console.log("[EVENT] response.output_audio_transcript.delta:", event);
       updateMessageById(event.item_id, (msg) => ({
         ...msg,
         content: (msg.content || "") + event.delta,

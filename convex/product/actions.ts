@@ -17,29 +17,32 @@ const TEXT_SIMILARITY_THRESHOLD = 0.3; // Minimum similarity score for text sear
 const IMAGE_SIMILARITY_THRESHOLD = 0.5; // Minimum similarity score for image search
 
 /**
- * Search products using text query with optional price filtering.
+ * Search products using text query with optional price and category filtering.
  *
  * @param textQuery - Text search query (e.g., "red sneakers")
  * @param minPrice - Optional minimum price filter (inclusive)
  * @param maxPrice - Optional maximum price filter (inclusive)
+ * @param categoryId - Optional category ID to filter results
  * @returns Array of products with similarity scores, sorted by relevance (highest first)
  *
  * @example
- * await searchProductsByText({ textQuery: "wireless headphones", maxPrice: 200 })
+ * await searchProductsByText({ textQuery: "wireless headphones", maxPrice: 200, categoryId: "..." })
  */
 export const searchProductsByText = action({
   args: {
     textQuery: v.string(),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
+    categoryId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Array<ProductSearchResult>> => {
-    const { textQuery, minPrice, maxPrice } = args;
+    const { textQuery, minPrice, maxPrice, categoryId } = args;
 
     const textEmbedding = await generateTextEmbedding(textQuery);
     const searchResults = await ctx.vectorSearch("productEmbeddings", "by_text_embedding", {
       vector: textEmbedding,
       limit: SEARCH_LIMIT,
+      filter: categoryId ? (q) => q.eq("categoryId", categoryId as Id<"categories">) : undefined,
     });
 
     // Fetch and format products with scores
@@ -50,24 +53,26 @@ export const searchProductsByText = action({
 });
 
 /**
- * Search products using uploaded image with optional price filtering.
+ * Search products using uploaded image with optional price and category filtering.
  *
  * @param imageUrl - URL of uploaded image (Convex storage URL)
  * @param minPrice - Optional minimum price filter (inclusive)
  * @param maxPrice - Optional maximum price filter (inclusive)
+ * @param categoryId - Optional category ID to filter results
  * @returns Array of products with similarity scores, sorted by relevance (highest first)
  *
  * @example
- * await searchProductsByImage({ imageUrl: "https://...", minPrice: 50 })
+ * await searchProductsByImage({ imageUrl: "https://...", minPrice: 50, categoryId: "..." })
  */
 export const searchProductsByImage = action({
   args: {
     imageUrl: v.string(),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
+    categoryId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Array<ProductSearchResult>> => {
-    const { imageUrl, minPrice, maxPrice } = args;
+    const { imageUrl, minPrice, maxPrice, categoryId } = args;
 
     // Generate description from image URL (works with Convex storage URLs)
     const imageDescription = await generateImageDescription(imageUrl);
@@ -75,6 +80,7 @@ export const searchProductsByImage = action({
     const searchResults = await ctx.vectorSearch("productEmbeddings", "by_image_embedding", {
       vector: imageEmbedding,
       limit: SEARCH_LIMIT,
+      filter: categoryId ? (q) => q.eq("categoryId", categoryId as Id<"categories">) : undefined,
     });
 
     const products = await fetchAndFormatProducts(ctx, searchResults, IMAGE_SIMILARITY_THRESHOLD, minPrice, maxPrice);

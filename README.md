@@ -145,6 +145,7 @@ Search for products using natural language text queries.
 - `textQuery` (string, required) - Search query (e.g., "wireless headphones", "red sneakers")
 - `minPrice` (number, optional) - Minimum price filter in dollars (inclusive)
 - `maxPrice` (number, optional) - Maximum price filter in dollars (inclusive)
+- `categoryId` (string, optional) - Category ID to filter results to a specific category
 
 **Returns:**
 Array of up to 10 products ranked by relevance, each containing:
@@ -158,9 +159,16 @@ Array of up to 10 products ranked by relevance, each containing:
 
 **Example:**
 ```typescript
+// Basic search
 searchProductsByText({
   textQuery: "wireless headphones",
   maxPrice: 200
+})
+
+// Search within a specific category
+searchProductsByText({
+  textQuery: "headphones",
+  categoryId: "jh71x8k9p1qk3r5s7t9v1w3x5y7z9a1b" // ID from listCategories
 })
 ```
 
@@ -172,6 +180,7 @@ Search for products similar to an uploaded image.
 - `imageUrl` (string, required) - URL of the uploaded image
 - `minPrice` (number, optional) - Minimum price filter in dollars (inclusive)
 - `maxPrice` (number, optional) - Maximum price filter in dollars (inclusive)
+- `categoryId` (string, optional) - Category ID to filter results to a specific category
 
 **Returns:**
 Array of up to 10 similar products, with the same structure as text search.
@@ -179,21 +188,29 @@ Array of up to 10 similar products, with the same structure as text search.
 
 **Example:**
 ```typescript
+// Basic image search
 searchProductsByImage({
   imageUrl: "https://example.convex.cloud/image.jpg",
   minPrice: 50
+})
+
+// Image search within a specific category
+searchProductsByImage({
+  imageUrl: "https://example.convex.cloud/shoe.jpg",
+  categoryId: "jh71x8k9p1qk3r5s7t9v1w3x5y7z9a1b" // ID from listCategories
 })
 ```
 
 ### **3. listCategories**
 
-List all available product categories.
+List all available product categories. Use this to get category IDs for filtering search results.
 
 **Parameters:**
 None
 
 **Returns:**
 Array of category objects:
+- `_id` - Unique category identifier (use this for categoryId parameter in search functions)
 - `name` - Category name
 - `slug` - URL-friendly slug
 - `description` - Category description
@@ -202,8 +219,18 @@ Array of category objects:
 ```typescript
 listCategories()
 // Returns: [
-//   { name: "Electronics", slug: "electronics", description: "..." },
-//   { name: "Clothing", slug: "clothing", description: "..." },
+//   {
+//     _id: "jh71x8k9p1qk3r5s7t9v1w3x5y7z9a1b",
+//     name: "Electronics",
+//     slug: "electronics",
+//     description: "..."
+//   },
+//   {
+//     _id: "kh82y9l0q2rl4s6t8u0w2x4y6z8a0b2c",
+//     name: "Clothing",
+//     slug: "clothing",
+//     description: "..."
+//   },
 //   ...
 // ]
 ```

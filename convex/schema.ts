@@ -28,13 +28,16 @@ export default defineSchema({
   productEmbeddings: defineTable({
     textEmbedding: v.array(v.float64()),   // From name+description
     imageEmbedding: v.array(v.float64()),  // From image via Vision API
+    categoryId: v.id("categories"), // Category for filtering
   })
     .vectorIndex("by_text_embedding", {
       vectorField: "textEmbedding",
       dimensions: 1536,
+      filterFields: ["categoryId"],
     })
     .vectorIndex("by_image_embedding", {
       vectorField: "imageEmbedding",
       dimensions: 1536,
+      filterFields: ["categoryId"],
     }),
 });

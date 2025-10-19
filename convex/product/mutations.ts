@@ -18,6 +18,7 @@ export const insertProduct = internalMutation({
     const embeddingId = await ctx.db.insert("productEmbeddings", {
       textEmbedding: args.textEmbedding,
       imageEmbedding: args.imageEmbedding,
+      categoryId: args.categoryId,
     });
 
     // Then, insert the product with reference to embedding
