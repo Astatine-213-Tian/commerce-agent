@@ -16,6 +16,7 @@ export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  imageUrl?: string;  // Single Convex storage URL for display and processing
 }
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -31,7 +32,7 @@ interface UseRealtimeAgentReturn {
   mediaStream: MediaStream | null;
   connect: () => Promise<void>;
   disconnect: () => void;
-  sendText: (text: string) => void;
+  sendMessage: (text: string, imageUrl?: string) => void;
 }
 
 export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps): UseRealtimeAgentReturn {
@@ -168,6 +169,7 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
           id: messageItem.itemId || Date.now().toString(),
           role: messageItem.role,
           content: extracted?.content || "",
+          imageUrl: extracted?.imageUrl,
         };
 
         setMessages((prev) => {
@@ -223,16 +225,24 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
   }, [onDisconnect, mediaStream]);
 
   /**
-   * Send a text message
+   * Send a message with optional image
    */
-  const sendText = useCallback((text: string) => {
+  const sendMessage = useCallback((text: string, imageUrl?: string) => {
     if (!sessionRef.current) {
       console.error("No active session");
       return;
     }
 
-    // Send to agent (SDK will add it to history via history_added event)
-    sessionRef.current.sendMessage(text);
+    if (imageUrl) {
+      // Send plain text with image URL, agent will extract it
+      const message = text
+        ? `${text} [Image URL: ${imageUrl}]`
+        : `Search for products similar to this image. [Image URL: ${imageUrl}]`;
+      sessionRef.current.sendMessage(message);
+    } else {
+      // Send regular text message
+      sessionRef.current.sendMessage(text);
+    }
   }, []);
 
   // Cleanup on unmount
@@ -250,7 +260,7 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
     mediaStream,
     connect,
     disconnect,
-    sendText,
+    sendMessage,
   };
 }
 
@@ -259,13 +269,14 @@ export default function useRealtimeAgent({ onDisconnect }: UseRealtimeAgentProps
  */
 function extractMessageContent(messageItem: RealtimeMessageItem): {
   content: string;
+  imageUrl?: string;
 } | null {
   let content = "";
 
   if (Array.isArray(messageItem.content)) {
     for (const contentItem of messageItem.content) {
       if (contentItem.type === "input_audio") {
-        // User speech transcription 
+        // User speech transcription
         content = contentItem.transcript || "";
         break;
       } else if (contentItem.type === "output_audio") {
@@ -277,12 +288,23 @@ function extractMessageContent(messageItem: RealtimeMessageItem): {
         content = contentItem.text || "";
         break;
       } else if (contentItem.type === "output_text") {
-        // Assistant text output  
+        // Assistant text output
         content = contentItem.text || "";
         break;
       }
     }
   }
 
-  return content ? { content } : null;
+  if (!content) return null;
+
+  // Extract image URL if present (format: [Image URL: ...])
+  let imageUrl: string | undefined;
+  const imageUrlMatch = content.match(/\[Image URL: (https:\/\/[^\]]+)\]/);
+  if (imageUrlMatch) {
+    imageUrl = imageUrlMatch[1];
+    // Remove the [Image URL: ...] tag from content
+    content = content.replace(imageUrlMatch[0], "").trim();
+  }
+
+  return { content, imageUrl };
 }

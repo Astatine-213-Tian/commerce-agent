@@ -1,6 +1,5 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
-import type { Id } from "@/convex/_generated/dataModel";
 import { ProductSearchResult, Category } from "@/types";
 
 /**
@@ -55,7 +54,7 @@ export function createAgentTools(
     maxPrice?: number;
   }) => Promise<ProductSearchResult[]>,
   searchByImage: (args: {
-    imageId: Id<"_storage">;
+    imageUrl: string;
     minPrice?: number;
     maxPrice?: number;
   }) => Promise<ProductSearchResult[]>,
@@ -81,15 +80,24 @@ export function createAgentTools(
         .describe("Optional maximum price filter in dollars (inclusive)"),
     }),
     execute: async (input) => {
+      console.log("[TOOL CALL] searchProductsByText", {
+        textQuery: input.textQuery,
+        minPrice: input.minPrice,
+        maxPrice: input.maxPrice,
+      });
       try {
         const results = await searchByText({
           textQuery: input.textQuery,
           minPrice: input.minPrice ?? undefined,
           maxPrice: input.maxPrice ?? undefined,
         });
+        console.log("[TOOL RESULT] searchProductsByText", {
+          count: results.length,
+          results,
+        });
         return results;
       } catch (error) {
-        console.error("Error in searchProductsByText:", error);
+        console.error("[TOOL ERROR] searchProductsByText:", error);
         return { error: String(error) };
       }
     },
@@ -100,9 +108,9 @@ export function createAgentTools(
     description:
       "Search for products similar to an uploaded image. User must upload image first. Returns up to 10 similar products with details.",
     parameters: z.object({
-      imageId: z
+      imageUrl: z
         .string()
-        .describe("Convex storage ID of the uploaded image"),
+        .describe("URL of the uploaded image"),
       minPrice: z
         .number()
         .nullable()
@@ -115,15 +123,24 @@ export function createAgentTools(
         .describe("Optional maximum price filter in dollars (inclusive)"),
     }),
     execute: async (input) => {
+      console.log("[TOOL CALL] searchProductsByImage", {
+        imageUrl: input.imageUrl,
+        minPrice: input.minPrice,
+        maxPrice: input.maxPrice,
+      });
       try {
         const results = await searchByImage({
-          imageId: input.imageId as Id<"_storage">,
+          imageUrl: input.imageUrl,
           minPrice: input.minPrice ?? undefined,
           maxPrice: input.maxPrice ?? undefined,
         });
+        console.log("[TOOL RESULT] searchProductsByImage", {
+          count: results.length,
+          results,
+        });
         return results;
       } catch (error) {
-        console.error("Error in searchProductsByImage:", error);
+        console.error("[TOOL ERROR] searchProductsByImage:", error);
         return { error: String(error) };
       }
     },
@@ -135,11 +152,16 @@ export function createAgentTools(
       "List all available product categories. Use this to help users browse by category or understand what types of products are available.",
     parameters: z.object({}),
     execute: async () => {
+      console.log("[TOOL CALL] listCategories");
       try {
         const categories = await listCategories();
+        console.log("[TOOL RESULT] listCategories", {
+          count: categories.length,
+          categories,
+        });
         return categories;
       } catch (error) {
-        console.error("Error in listCategories:", error);
+        console.error("[TOOL ERROR] listCategories:", error);
         return { error: String(error) };
       }
     },

@@ -2,7 +2,7 @@
 
 import { action, ActionCtx } from "../_generated/server";
 import { api } from "../_generated/api";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
 import { generateTextEmbedding, generateImageDescription } from "../lib/openai";
 import { ProductSearchResult } from "../../types";
@@ -13,6 +13,7 @@ type VectorSearchResult = { _id: EmbeddingId; _score: number };
 // Constants
 const RESULT_LIMIT = 10;
 const SEARCH_LIMIT = 30; // Higher limit to account for price filtering
+const SIMILARITY_THRESHOLD = 0.5; // Minimum similarity score to include results
 
 /**
  * Search products using text query with optional price filtering.
@@ -48,30 +49,24 @@ export const searchProductsByText = action({
 /**
  * Search products using uploaded image with optional price filtering.
  *
- * @param imageId - Convex storage ID of uploaded image
+ * @param imageUrl - URL of uploaded image (Convex storage URL)
  * @param minPrice - Optional minimum price filter (inclusive)
  * @param maxPrice - Optional maximum price filter (inclusive)
  * @returns Array of products with similarity scores, sorted by relevance (highest first)
- * @throws {ConvexError} If image not found in storage
  *
  * @example
- * await searchProductsByImage({ imageId: storageId, minPrice: 50 })
+ * await searchProductsByImage({ imageUrl: "https://...", minPrice: 50 })
  */
 export const searchProductsByImage = action({
   args: {
-    imageId: v.id("_storage"),
+    imageUrl: v.string(),
     minPrice: v.optional(v.number()),
     maxPrice: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Array<ProductSearchResult>> => {
-    const { imageId, minPrice, maxPrice } = args;
+    const { imageUrl, minPrice, maxPrice } = args;
 
-    // Get image URL and generate description
-    const imageUrl = await ctx.storage.getUrl(imageId);
-    if (!imageUrl) {
-      throw new ConvexError("Image not found in storage");
-    }
-
+    // Generate description from image URL (works with Convex storage URLs)
     const imageDescription = await generateImageDescription(imageUrl);
     const imageEmbedding = await generateTextEmbedding(imageDescription);
     const searchResults = await ctx.vectorSearch("productEmbeddings", "by_image_embedding", {
@@ -107,8 +102,9 @@ async function fetchAndFormatProducts(
   // Map products by embeddingId for efficient lookup
   const productMap = new Map(products.map((p) => [p.embeddingId, p]));
 
-  // Format products with scores, filter by price, and limit
+  // Format products with scores, filter by similarity threshold and price, and limit
   return searchResults
+    .filter((result) => result._score >= SIMILARITY_THRESHOLD)
     .map((result) => {
       const product = productMap.get(result._id);
       if (!product) return null;

@@ -22,7 +22,7 @@ export default function Home() {
     mediaStream,
     connect,
     disconnect,
-    sendText,
+    sendMessage,
   } = useRealtimeAgent({
     onDisconnect: handleDisconnect,
   });
@@ -64,7 +64,7 @@ export default function Home() {
         mediaStream={mediaStream}
         onStartSession={handleStartSession}
         onDisconnect={disconnect}
-        onSendText={sendText}
+        onSendMessage={sendMessage}
         selectedMicId={selectedMicId}
         onMicChange={setSelectedMicId}
       />

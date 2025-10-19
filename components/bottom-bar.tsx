@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MicrophoneSelector } from "./microphone-selector";
-import { TextInput } from "./text-input";
+import { UserInput } from "./user-input";
 import { AudioWaveform } from "./audio-waveform";
 import { Spinner } from "@/components/ui/spinner";
 import { Circle } from "lucide-react";
@@ -11,7 +11,7 @@ interface BottomBarProps {
   mediaStream: MediaStream | null;
   onStartSession: () => void;
   onDisconnect: () => void;
-  onSendText: (text: string) => void;
+  onSendMessage: (text: string, imageUrl?: string) => void;
   selectedMicId: string | undefined;
   onMicChange: (deviceId: string) => void;
 }
@@ -21,7 +21,7 @@ export function BottomBar({
   mediaStream,
   onStartSession,
   onDisconnect,
-  onSendText,
+  onSendMessage,
   selectedMicId,
   onMicChange,
 }: BottomBarProps) {
@@ -88,7 +88,7 @@ export function BottomBar({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <TextInput onSend={onSendText} />
+            <UserInput onSend={onSendMessage} />
           </motion.div>
         </AnimatePresence>
 

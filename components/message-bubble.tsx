@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ProductCard, ProductCardProps } from "./product-card";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,7 @@ import { LoadingDots } from "./ui/loading-dots";
 export interface MessageBubbleProps {
   role: "user" | "assistant" | "system";
   content: string;
+  imageUrl?: string;
 }
 
 interface ParsedMessage {
@@ -32,6 +34,7 @@ function parseMessageContent(content: string): ParsedMessage {
 function MessageBubbleComponent({
   role,
   content,
+  imageUrl,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const parsed = parseMessageContent(content);
@@ -54,10 +57,19 @@ function MessageBubbleComponent({
             : "bg-secondary text-secondary-foreground"
         )}
       >
-        {!content ? (
+        {!content && !imageUrl ? (
           <LoadingDots />
         ) : (
           <>
+            {imageUrl && (
+              <Image
+                src={imageUrl}
+                alt="Uploaded image"
+                width={128}
+                height={128}
+                className="w-32 h-32 object-cover rounded-lg"
+              />
+            )}
             {parsed.text && <p className="text-sm whitespace-pre-wrap">{parsed.text}</p>}
             {parsed.products && parsed.products.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

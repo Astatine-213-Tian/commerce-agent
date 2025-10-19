@@ -17,6 +17,7 @@ import type * as product_queries from "../product/queries.js";
 import type * as seed_mockdata from "../seed/mockdata.js";
 import type * as seed_seed from "../seed/seed.js";
 import type * as storage_mutations from "../storage/mutations.js";
+import type * as storage_queries from "../storage/queries.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "seed/mockdata": typeof seed_mockdata;
   "seed/seed": typeof seed_seed;
   "storage/mutations": typeof storage_mutations;
+  "storage/queries": typeof storage_queries;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

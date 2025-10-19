@@ -26,6 +26,7 @@ export function MessageList({ messages, autoScroll = true }: MessageListProps) {
             key={message.id}
             role={message.role}
             content={message.content}
+            imageUrl={message.imageUrl}
           />
         ))}
         <div ref={messagesEndRef} />
